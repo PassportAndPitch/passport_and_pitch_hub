@@ -20,15 +20,7 @@ const Newsletter: React.FC = () => {
     setErrorMsg('');
 
     try {
-      // Add to CRM list (must be absolute URL — the relative /api path hits the
-      // preview's CloudFront distribution which only allows GET/HEAD and returns 403)
-      await fetch('https://famous.ai/api/crm/6a092cc4f8419a3382e07244/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, source: 'newsletter-postcard', tags: ['newsletter', 'postcard'] }),
-      }).catch((err) => console.error('CRM subscribe failed:', err));
-
-      // Backup: store subscriber in Supabase database
+            // Backup: store subscriber in Supabase database
       const { error: dbError } = await supabase
         .from('newsletter_subscribers')
         .insert({

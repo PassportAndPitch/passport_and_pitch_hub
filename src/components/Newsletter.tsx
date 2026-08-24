@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Mail, Send, Check } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+
+// Replace with your Kit form ID (Kit -> Grow -> Landing Pages & Forms -> your form -> the
+// number in its URL, e.g. app.kit.com/forms/1234567/edit  ->  1234567)
+const KIT_FORM_ID = '9840137';
 
 const Newsletter: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,50 +19,37 @@ const Newsletter: React.FC = () => {
       return;
     }
     setStatus('loading');
-
     setErrorMsg('');
 
     try {
-            // Backup: store subscriber in Supabase database
-      const { error: dbError } = await supabase
-        .from('newsletter_subscribers')
-        .insert({
-          email,
-          name: name || null,
-          source: 'newsletter-postcard',
-          tags: ['newsletter', 'postcard'],
-        });
-      if (dbError && dbError.code !== '23505') {
-        // 23505 = unique violation (already subscribed) — that's fine
-        console.error('DB backup failed:', dbError);
+      const res = await fetch(
+        `https://app.kit.com/forms/${KIT_FORM_ID}/subscriptions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            email_address: email,
+            fields: { first_name: name || '' },
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`Kit responded with ${res.status}`);
       }
-
-      // Send notification email to Jeremy via Resend
-      const { error: notifyError } = await supabase.functions.invoke('notify-newsletter-signup', {
-        body: { email, name, source: 'newsletter-postcard' },
-      });
-      if (notifyError) {
-        console.error('Notification email failed:', notifyError);
-      }
-
-      // Send automated welcome email to the new subscriber (fire and don't block)
-      supabase.functions
-        .invoke('send-welcome-email', { body: { email, name } })
-        .then(({ error: welcomeError }) => {
-          if (welcomeError) console.error('Welcome email failed:', welcomeError);
-        });
-
 
       setStatus('success');
       setEmail('');
       setName('');
     } catch (err) {
+      console.error('Newsletter signup failed:', err);
       setStatus('error');
-      setErrorMsg('Something went wrong. Try again.');
+      setErrorMsg('Something went wrong. Please try again.');
     }
   };
-
-
 
   return (
     <section id="newsletter" className="relative py-24 bg-[#13294B] overflow-hidden">
